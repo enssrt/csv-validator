@@ -1,15 +1,22 @@
 
-
-# ипортируем настройки из конфигурационного модуля
-from source.config import folder_path, reports_dir
-# Импортируем функцию-обработчик сценария
+from source.config import folder_path, reports_dir, required_columns
 from source.processor import process_single_file, process_folder
-from source.csv_utils import check_required_columns, normalize_header, read_csv_file
 from pathlib import Path
+import argparse
+
 
 def main():
-    input_folder = Path(folder_path)
-    output_folder = Path(reports_dir)
+    # создаем инструмент для разбора терминала
+    parser = argparse.ArgumentParser(description="Программа для автоматической валидации CSV таблиц")
+    # создаем аргумент --input чтобы код воспринимал его
+    parser.add_argument('--input',type=str, required=True, help="Путь к исходной папки с CSV")
+    # создаем аргумент --output чтобы код воспринимал его
+    parser.add_argument('--output',type=str, required=True, help="Путь папки для отчетов с CSV")
+    # читаем аргуементы из консоли и раскладываем по переменным
+    args = parser.parse_args()
+    # делаем умные обьекты путей 
+    input_folder = Path(args.input)
+    output_folder = Path(args.output)
 
     # Проверяем, существует ли папка с исходными файлами
     if not input_folder.is_dir():
@@ -20,49 +27,27 @@ def main():
     print(f"Подготовка папки для отчетов: {reports_dir}")
     output_folder.mkdir(parents=True, exist_ok=True)
 
-    # Получаем список всех файлов в папке
-    all_files = list(input_folder.iterdir())
     print(f"происходит обработка папки: {folder_path}")
 
-    # Счетчики для общей статистики
-    csv_count = 0
-    csv_success = 0
-    csv_failed = 0
+    stats = run_pipeline(input_folder, output_folder)
 
-    for file_path in all_files: 
-
-        # Обрабатываем только файлы с расширением .csv
-        if file_path.suffix != ".csv":
-            continue
-
-        csv_count += 1
-
-        # Запускаем обработку одного файла и получаем словарь с результатами
-        file_result = process_single_file(file_path, output_folder)
-
-        print(f"статус проверки: ", {file_result["status"]})
-
-        # Проверяем по словарю, сохранился ли отчет, и обновляем счетчики
-        if file_result["report_saved"]:
-            print(f"отчет для {file_path.name} успешно сохранен")
-            csv_success += 1
-        else:
-            print(f"не удалось сохранить отчет для файла {file_path.name}, причина ошибки: {file_result['error_reason']} ")
-            csv_failed += 1
-    print("\n")
+    # финальный отчет
+    print("\n" + "="*40)
+    print("         ФИНАЛЬНАЯ СТАТИСТИКА")
+    print("="*40)
     
-    # Выводим финальную общую статистику в консоль
-    if csv_count == 0:
-        print("Внимание: в указанной папке не найдено ни одного CSV-файла для обработки!")
+    if stats["total_files"] == 0:
+        print("Внимание: в указанной папке не найдено ни одного CSV-файла!")
     else:
-        print("Обработка завершена. \n")
-        print(f"всего найдено CSV файлов: {csv_count}")
-        print(f"количество обработанных CSV файлов: {csv_success}")
-        print(f"количество необработанных CSV файлов: {csv_failed}")   
-    print("выполнение программы закончено")
+        print(f"Всего найдено и проверено файлов:    {stats['total_files']}")
+        print(f"Успешно валидировано (OK):           {stats['OK']}")
+        print(f"Файлов с ошибками (ERROR):           {stats['ERROR']}")
+        print(f"Не удалось прочитать (NOT_READ):     {stats['NOT_READ']}")
+        print(f"Ошибка записи отчета (REPORT_ERROR): {stats['REPORT_ERROR']}")
+        
+    print("="*40)
+    print("Выполнение программы закончено.")
 
-if __name__ == "__main__":
-    main()
 
 def run_pipeline(input_folder, output_folder):
 
@@ -86,3 +71,6 @@ def run_pipeline(input_folder, output_folder):
 
             stats["total_files"] += 1
     return stats
+
+if __name__ == "__main__":
+    main()
