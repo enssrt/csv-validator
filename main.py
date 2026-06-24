@@ -39,11 +39,11 @@ def main():
     if stats["total_files"] == 0:
         print("Внимание: в указанной папке не найдено ни одного CSV-файла!")
     else:
-        print(f"Всего найдено и проверено файлов:    {stats['total_files']}")
-        print(f"Успешно валидировано (OK):           {stats['OK']}")
-        print(f"Файлов с ошибками (ERROR):           {stats['ERROR']}")
-        print(f"Не удалось прочитать (NOT_READ):     {stats['NOT_READ']}")
-        print(f"Ошибка записи отчета (REPORT_ERROR): {stats['REPORT_ERROR']}")
+        print(f" Всего найдено и проверено файлов:    {stats['total_files']}")
+        print(f" Успешно валидировано (OK):           {stats['OK']}")
+        print(f" Файлов с ошибками (ERROR):           {stats['ERROR']}")
+        print(f" Не удалось прочитать (NOT_READ):     {stats['NOT_READ']}")
+        print(f" Ошибка записи отчета (REPORT_ERROR): {stats['REPORT_ERROR']}")
         
     print("="*40)
     print("Выполнение программы закончено.")
