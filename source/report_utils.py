@@ -1,20 +1,51 @@
+# soure/report_utils.py
 
-def generate_report(normalized_header, data_row_count, status, missing_columns, required_columns, report_path):
+def generate_report(normalized_header, data_row_count, status, missing_columns, required_columns, report_path, data_errors):
     try:
+        # Защита от None: если валидация строк не проводилась, подменяем None на пустой список,
+        # чтобы функция len(data_errors) ниже не выдала ошибку.
+        data_errors = data_errors or []
         # Записываем результаты проверки в текстовый файл отчета
         with open(report_path, "w", encoding="utf-8") as report_file:
-            report_file.write("колонки в файле: " + str(normalized_header) + "\n")
-            report_file.write("количество колонок в файле: " + str(len(normalized_header)) + "\n")
-            report_file.write("количество строк данных: " + str(data_row_count) + "\n")
-            report_file.write("статус проверки: " + str(status) + "\n")    
-            
-            # Текст отчета меняется в зависимости от статуса проверки
-            if status == "ERROR":
-                report_file.write("отсутствующие колонки: " + str(missing_columns) + "\n")
-                report_file.write("количество отсутствующих колонок: " + str(len(missing_columns)) + "\n")
+            # шапка отчета
+            report_file.write("=" * 50 + "\n")
+            report_file.write("              ОТЧЕТ ОБ ОБРАБОТКЕ ФАЙЛА            \n")
+            report_file.write("=" * 50 + "\n")
+            report_file.write(f"СТАТУС: {status} \n")
+            report_file.write(f"КОЛИЧЕСТВО СТРОК С ДАННЫМИ: {data_row_count} \n")
+            # проверка структуры колонок
+            report_file.write("-" * 50 + "\n")
+            report_file.write("1. ПРОВЕРКА СТРУКТУРЫ КОЛОНОК \n")
+            report_file.write("-" * 50 + "\n")
+            # проверяем сначала наличие колонок(смогли ли мы их нормализовать)
+            if normalized_header is not None:
+                report_file.write(f"Колонки в файле: {normalized_header} \n")
+                report_file.write(f"Количество колонок в файле: {len(normalized_header)}\n")
             else:
-                report_file.write("обязательные колонки найдены: " + str(required_columns) + "\n")
-                report_file.write("количество обязательных найденных колонок: " + str(len(required_columns)) + "\n")
+                report_file.write("Колонки в файле: не удалось прочитать (файл пуст или поврежден)\n")
+            # Проверяем наличие обязательных колонок
+            if status == "ERROR" and len(missing_columns) > 0:
+                report_file.write("Статус колонок: ОШИБКА (отсутствуют обязательные колонки) \n")
+                report_file.write(f"Отсутствующие колонки: {missing_columns}\n")
+            else:
+                report_file.write("Статус колонок: ОК (все обязательные колонки присутствуют)\n")
+                report_file.write(f"Обязательные колонки: {required_columns}\n")
+            # проверка структуры данных
+            report_file.write("=" * 50 + "\n")
+            report_file.write("2. ПРОВЕРКА ДАННЫХ (ПОСТРОЧНО)\n")
+            report_file.write("=" * 50 + "\n")
+            # проверяем соответствие данных колонкам
+            if missing_columns and len(missing_columns) > 0:
+                report_file.write("Валидация строк не производилась из-за критической ошибки структуры. \n")
+            elif len(data_errors) > 0:
+                report_file.write(f"ОБНАРУЖЕНО ОШИБОК В СТРОКАХ: {len(data_errors)}\n")
+                report_file.write("ИНФОРМАЦИЯ ОБ ОШИБКАХ: \n")
+                for error in data_errors:
+                    report_file.write(f"{error}\n")
+            else:
+                report_file.write("ОБНАРУЖЕНО ОШИБОК В СТРОКАХ: 0 \n")
+                report_file.write("Ошибок в данных строк не обнаружено. \n")
+            report_file.write("=" * 50 + "\n")
         return True
     except Exception as e:
         print(f"He удалось сохранить отчет на диск: {e}")

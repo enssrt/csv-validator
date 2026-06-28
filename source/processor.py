@@ -1,10 +1,12 @@
-import os
-
+# source/processor.py
+import csv
 from source.csv_utils import read_csv_file, check_required_columns, normalize_header
 from source.report_utils import generate_report
-from source.config import required_columns # ["name", "date", "price"]
+from source.validators import validate_price, validate_date
+from source.config import REQUIRED_COLUMNS
 from pathlib import Path
 
+# Single file
 def process_single_file(file_path, output_folder): 
     
     # переменная из полного адресса пути файла, но мы его отрезали оставив только имя
@@ -14,7 +16,8 @@ def process_single_file(file_path, output_folder):
         "file_name": file_name,
         "status": "UNKNOWN",
         "report_saved": False,
-        "error_reason": None
+        "error_reason": None,
+        "data_errors": None
     }
 
     header, data_row_count = read_csv_file(file_path)
@@ -30,8 +33,8 @@ def process_single_file(file_path, output_folder):
         return result
 
     # Нормализуем заголовок и проверяем колонки
-    normalized_header = normalize_header(header)        
-    missing_columns, status = check_required_columns(normalized_header, required_columns)
+    normalized_header = normalize_header(header)     
+    missing_columns, status = check_required_columns(normalized_header, REQUIRED_COLUMNS)
     
     # Сохраняем статус проверки в словарь результатов
     result["status"] = status
@@ -39,11 +42,57 @@ def process_single_file(file_path, output_folder):
     # Если колонки пропущены — сохраняем конкретику в словарь
     if status == "ERROR":
         result["error_reason"] = f"Отсутствуют обязательные колонки: {missing_columns}"
+    else:
+        with open(file_path, mode="r", encoding="utf-8") as file:
+                # инструмент который читает и создает словари по ключам
+                reader = csv.DictReader(file)
+                # enumerate - это счетчик который считает каждую строку 
+                # она с помощью reader читает, разделяет и ставит словарь 
+                # и начинает со второй строки 
+                # row_idx - это индекс каждой строки 
+                # row это просто строка
+                for row_idx, row in enumerate(reader, start=2):
+                    # нормализируем ключи, оставляя значения неизменными 
+                    # [k] делает из ключа список, а [0] достает из результата строку
+                    norm_row = {normalize_header([k])[0]: v for k, v in row.items()}
+
+                    # достаем из строки нужный элемент по ее ключу
+                    raw_price = norm_row.get("price")
+                    raw_date = norm_row.get("date")
+                    
+                    # достаем итоговые значения с помощью функций
+                    is_price_correct, price_err = validate_price(raw_price)
+                    is_date_correct, date_err = validate_date(raw_date)
+
+                    if not is_price_correct or not is_date_correct:
+                        
+                        if result["data_errors"] is None:
+                            result["data_errors"] = []
+
+                        if not is_price_correct:
+                            result["data_errors"].append(f"В строке {row_idx} ошибка цены: {price_err}")
+                        
+                        if not is_date_correct:
+                            result["data_errors"].append(f"В строке {row_idx} ошибка даты: {date_err}")
+                        
+        if result["data_errors"] and len(result["data_errors"]) > 0:
+            result["status"] = "ERROR"
+            result["error_reason"] = "Обнаружены ошибки значений в строках"
+        else:
+            result["status"] = "OK"
 
     report_path = output_folder / f"report_{file_name}.txt"
 
     # Пробуем сохранить отчет и записываем результат в словарь
-    is_report_saved = generate_report(normalized_header, data_row_count, status, missing_columns, required_columns, report_path)
+    is_report_saved = generate_report(
+        normalized_header, 
+        data_row_count, 
+        result["status"],
+        missing_columns, 
+        REQUIRED_COLUMNS, 
+        report_path,
+        result["data_errors"]
+        )
 
     result["report_saved"] = is_report_saved
 
@@ -54,6 +103,8 @@ def process_single_file(file_path, output_folder):
     
     return result
 
+
+ # Folder
 def process_folder(input_folder, output_folder):
     # превращаем папку в обьект адресса с помощью path
     input_folder = Path(input_folder)
