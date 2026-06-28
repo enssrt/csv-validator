@@ -1,13 +1,13 @@
 # source/processor.py
 import csv
+
 from source.csv_utils import read_csv_file, check_required_columns, normalize_header
 from source.report_utils import generate_report
 from source.validators import validate_price, validate_date
-from source.config import REQUIRED_COLUMNS
 from pathlib import Path
 
 # Single file
-def process_single_file(file_path, output_folder): 
+def process_single_file(file_path, output_folder, current_columns): 
     
     # переменная из полного адресса пути файла, но мы его отрезали оставив только имя
     file_name = file_path.name
@@ -34,7 +34,7 @@ def process_single_file(file_path, output_folder):
 
     # Нормализуем заголовок и проверяем колонки
     normalized_header = normalize_header(header)     
-    missing_columns, status = check_required_columns(normalized_header, REQUIRED_COLUMNS)
+    missing_columns, status = check_required_columns(normalized_header, current_columns)
     
     # Сохраняем статус проверки в словарь результатов
     result["status"] = status
@@ -56,25 +56,26 @@ def process_single_file(file_path, output_folder):
                     # [k] делает из ключа список, а [0] достает из результата строку
                     norm_row = {normalize_header([k])[0]: v for k, v in row.items()}
 
-                    # достаем из строки нужный элемент по ее ключу
-                    raw_price = norm_row.get("price")
-                    raw_date = norm_row.get("date")
-                    
-                    # достаем итоговые значения с помощью функций
-                    is_price_correct, price_err = validate_price(raw_price)
-                    is_date_correct, date_err = validate_date(raw_date)
-
-                    if not is_price_correct or not is_date_correct:
-                        
-                        if result["data_errors"] is None:
-                            result["data_errors"] = []
-
+                    # ПРОВЕРКА PRICE
+                    if "price" in current_columns:
+                        # достаем из строки нужный элемент по ее ключу
+                        raw_price = norm_row.get("price")
+                        # достаем итоговые значения с помощью функций
+                        is_price_correct, price_err = validate_price(raw_price)
                         if not is_price_correct:
+                            if result["data_errors"] is None:
+                                result["data_errors"] = []
                             result["data_errors"].append(f"В строке {row_idx} ошибка цены: {price_err}")
-                        
+
+                    # ПРОВЕРКА DATE
+                    if "date" in current_columns:
+                        raw_date = norm_row.get("date")
+                        is_date_correct, date_err = validate_date(raw_date)
                         if not is_date_correct:
+                            if result["data_errors"] is None:
+                                result["data_errors"] = []
                             result["data_errors"].append(f"В строке {row_idx} ошибка даты: {date_err}")
-                        
+                    
         if result["data_errors"] and len(result["data_errors"]) > 0:
             result["status"] = "ERROR"
             result["error_reason"] = "Обнаружены ошибки значений в строках"
@@ -89,7 +90,7 @@ def process_single_file(file_path, output_folder):
         data_row_count, 
         result["status"],
         missing_columns, 
-        REQUIRED_COLUMNS, 
+        current_columns, 
         report_path,
         result["data_errors"]
         )
@@ -105,7 +106,7 @@ def process_single_file(file_path, output_folder):
 
 
  # Folder
-def process_folder(input_folder, output_folder):
+def process_folder(input_folder, output_folder, current_columns):
     # превращаем папку в обьект адресса с помощью path
     input_folder = Path(input_folder)
     results = []
@@ -119,7 +120,7 @@ def process_folder(input_folder, output_folder):
         if file_path.suffix == ".csv":
 
             # получаем итог файла через функцию
-            file_result = process_single_file(file_path, output_folder)
+            file_result = process_single_file(file_path, output_folder, current_columns)
 
             # кидаем в словарь список результатов файла
             results.append(file_result)

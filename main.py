@@ -1,5 +1,8 @@
 # main.py
 
+
+from source.csv_utils import normalize_cli_columns
+from source.config import REQUIRED_COLUMNS
 from source.processor import process_folder
 from pathlib import Path
 import argparse
@@ -8,15 +11,24 @@ import sys
 def main(args_list=None):
     # создаем инструмент для чтения терминала
     parser = argparse.ArgumentParser(description="Программа для автоматической валидации CSV таблиц")
-    # создаем аргумент --input чтобы код воспринимал его
+    # создаем аргументы чтобы код мог их воспринимать
     parser.add_argument('--input',type=str, required=True, help="Путь к исходной папки с CSV")
-    # создаем аргумент --output чтобы код воспринимал его
     parser.add_argument('--output',type=str, required=True, help="Путь папки для отчетов с CSV")
+    parser.add_argument('--columns',type=str, required=False, help="Список обязательных колонок через запятую")
     # читаем аргуементы из консоли и раскладываем по переменным
     args = parser.parse_args(args_list)
     # делаем умные обьекты путей 
     input_folder = Path(args.input)
     output_folder = Path(args.output)
+
+
+
+    if args.columns:
+        norm_cli_columns = normalize_cli_columns(args.columns)
+    else:
+        print("Вы не указали обязательные колонки, обязательные колонки будут выбраны по умолчанию (name,date,price)")
+        norm_cli_columns = REQUIRED_COLUMNS
+
 
     # Проверяем, существует ли папка с исходными файлами
     if not input_folder.is_dir():
@@ -29,7 +41,7 @@ def main(args_list=None):
 
     print(f"происходит обработка папки: {input_folder}")
 
-    stats = run_pipeline(input_folder, output_folder)
+    stats = run_pipeline(input_folder, output_folder, norm_cli_columns)
 
     # финальный отчет
     print("\n" + "="*40)
@@ -49,9 +61,9 @@ def main(args_list=None):
     print("Выполнение программы закончено.")
     sys.exit(0)
 
-def run_pipeline(input_folder, output_folder):
+def run_pipeline(input_folder, output_folder, current_columns):
 
-    results = process_folder(input_folder, output_folder)
+    results = process_folder(input_folder, output_folder, current_columns)
     # словарь статистики по всем файлам 
     stats = {
         "total_files": 0,

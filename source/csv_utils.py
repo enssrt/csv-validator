@@ -1,5 +1,5 @@
 import csv
-
+# по умолчанию
 def read_csv_file(file_path):
     try:
         with open(file_path, "r", encoding="utf-8") as file:
@@ -37,3 +37,14 @@ def check_required_columns(normalized_header, required_columns):
     else:
         status = "OK" 
     return missing_columns, status
+
+
+def normalize_cli_columns(raw_columns_str):
+    # если ничего не написали возвращаем пустоту и заканчиваем
+    if not raw_columns_str or not raw_columns_str.strip():
+        return []
+    # Нормализуем каждую колонку (убираем пробелы и делаем строчными буквами)
+    cleaned = [raw_column.strip().lower() for raw_column in raw_columns_str.split(",")]
+    # возвращаем только те колонки, которые существуют
+    return [column for column in cleaned if column]
+
