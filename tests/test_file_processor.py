@@ -4,6 +4,7 @@ from pathlib import Path
 from source.processor import process_single_file
 
 def test_file_full_correct(tmp_path):
+    current_columns = ["name", "price", "date"]
     # даем переменную папке с названием + что она временная
     output_folder = tmp_path / "Folder"
     # создаем папку
@@ -18,14 +19,15 @@ def test_file_full_correct(tmp_path):
         "status": "OK",
         "report_saved": True,
         "error_reason": None,
-        "data_errors": None
+        "data_errors": []
     }
     # настоящий результат
-    actual_file_result = process_single_file(file_path, output_folder)
+    actual_file_result = process_single_file(file_path, output_folder, current_columns)
     # сравнение результатов
     assert actual_file_result == expected_file_result
 
 def test_file_no_files(tmp_path):
+    current_columns = ["name", "price", "date"]
     # даем переменную папке с названием + что она временная
     output_folder = tmp_path / "Folder"
     # создаем папку
@@ -38,14 +40,15 @@ def test_file_no_files(tmp_path):
         "status": "NOT_READ",
         "report_saved": False,
         "error_reason": "файл не найден по указанному пути",
-        "data_errors": None
+        "data_errors": []
     }
     # настоящий результат
-    actual_file_result = process_single_file(file_path, output_folder)
+    actual_file_result = process_single_file(file_path, output_folder, current_columns)
     # сравнение результатов
     assert actual_file_result == expected_file_result
         
 def test_file_full_ignor_no_csv(tmp_path):
+    current_columns = ["name", "price", "date"]
     # даем переменную папке с названием + что она временная
     output_folder = tmp_path / "Folder"
     # создаем папку
@@ -60,14 +63,15 @@ def test_file_full_ignor_no_csv(tmp_path):
         "status": "OK",
         "report_saved": True,
         "error_reason": None,
-        "data_errors": None
+        "data_errors": []
     }
     # настоящий результат
-    actual_file_result = process_single_file(file_path, output_folder)
+    actual_file_result = process_single_file(file_path, output_folder, current_columns)
     # сравнение результатов
     assert actual_file_result == expected_file_result
 
 def test_file_no_folder(tmp_path):
+    current_columns = ["name", "price", "date"]
     # даем переменную папке с названием + что она временная
     output_folder = tmp_path / "Folder"
 
@@ -83,14 +87,15 @@ def test_file_no_folder(tmp_path):
         "status": "REPORT_ERROR",
         "report_saved": False,
         "error_reason": "Не удалось записать файл отчета на диск",
-        "data_errors": None
+        "data_errors": []
     }
     # настоящий результат
-    actual_file_result = process_single_file(file_path, output_folder)
+    actual_file_result = process_single_file(file_path, output_folder, current_columns)
     # сравнение результатов
     assert actual_file_result == expected_file_result
 
 def test_process_single_file_error_price_data(tmp_path):
+    current_columns = ["name", "price", "date"]
     """Тест на интеграцию валидатора цены: колонки ОК, но цена битая + проверка отчета"""
     output_folder = tmp_path / "Folder"
     output_folder.mkdir()
@@ -105,7 +110,7 @@ def test_process_single_file_error_price_data(tmp_path):
         "data_errors": ["В строке 2 ошибка цены: Цена должна быть строго больше нуля"]
     }
     
-    actual_result = process_single_file(file_path, output_folder)
+    actual_result = process_single_file(file_path, output_folder, current_columns )
     assert actual_result == expected_result
 
     report_path = output_folder / f"report_{file_path.name}.txt" 
@@ -120,6 +125,7 @@ def test_process_single_file_error_price_data(tmp_path):
 
 
 def test_process_single_file_error_date_data(tmp_path):
+    current_columns = ["name", "price", "date"]
     """Тест на интеграцию валидатора даты: колонки ОК, но дата битая + проверка отчета"""
     output_folder = tmp_path / "Folder"
     output_folder.mkdir()
@@ -134,7 +140,7 @@ def test_process_single_file_error_date_data(tmp_path):
         "data_errors": ["В строке 2 ошибка даты: Некорректный формат даты или несуществующая дата"]
     }
     
-    actual_result = process_single_file(file_path, output_folder)
+    actual_result = process_single_file(file_path, output_folder, current_columns)
     assert actual_result == expected_result
 
     report_path = output_folder / f"report_{file_path.name}.txt"

@@ -48,8 +48,11 @@ def generate_report(normalized_header, data_row_count, status, missing_columns, 
             if len(data_errors) > 0:
                 report_file.write(f"ОБНАРУЖЕНО ОШИБОК В СТРОКАХ: {len(data_errors)} \n")
                 report_file.write("ИНФОРМАЦИЯ ОБ ОШИБКАХ: \n")
-                for error in data_errors:
-                    report_file.write(f" - {error}\n")
+                for err in data_errors:
+                    if err["column"] == "price":
+                        report_file.write(f"В строке {err['row']} ошибка цены: {err['message']}\n")
+                    elif err["column"] == "date":
+                        report_file.write(f"В строке {err['row']} ошибка даты: {err['message']}\n")
             else:
                 report_file.write("ОБНАРУЖЕНО ОШИБОК В СТРОКАХ: 0\n")
                 report_file.write("Ошибок в данных строк не обнаружено.\n")

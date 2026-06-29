@@ -1,10 +1,13 @@
 # tests/test_pipeline.py
 import unittest
 from pathlib import Path
-
+import sys
+from unittest.mock import patch
+import pytest
 # Импортируем наши функции для проверки
 from source.csv_utils import normalize_cli_columns, check_required_columns
 from source.validators import validate_price, validate_date
+from main import main
 from main import run_pipeline
 
 class TestCSVValidationPipeline(unittest.TestCase):
@@ -59,3 +62,54 @@ class TestCSVValidationPipeline(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+
+def test_integration_custom_columns_success(tmp_path):
+    # Настраиваем папки
+    input_folder = tmp_path / "input"
+    output_folder = tmp_path / "output"
+    input_folder.mkdir()
+    output_folder.mkdir()
+
+    # Создаем CSV-файл в папке input
+    csv_content = "id,title\n1,Pro Python\n2,Clean Code\n"
+    test_file = input_folder / "books.csv"
+    test_file.write_text(csv_content, encoding="utf-8")
+
+    # Запускаем функцию 
+    run_pipeline(str(input_folder), str(output_folder), ["id", "title"])
+
+    report_file = output_folder / "report_books.csv.txt"
+    
+    # Файл должен существовать
+    assert report_file.exists() is True
+    
+    # Внутри должен быть успешный статус
+    report_text = report_file.read_text(encoding="utf-8")
+    assert "СТАТУС: OK" in report_text
+    
+def test_cli_custom_columns_success(tmp_path):
+    input_folder = tmp_path / "input"
+    output_folder = tmp_path / "output"
+    input_folder.mkdir()
+    output_folder.mkdir()
+
+    csv_content = "id,title\n1,Pro Python\n2,Clean Code\n"
+    test_file = input_folder / "books.csv"
+    test_file.write_text(csv_content, encoding="utf-8")
+
+    test_args = [ 
+        "--input", str(input_folder), 
+        "--output", str(output_folder), 
+        "--columns", "id, title"
+    ]
+
+    exit_code = main(test_args)
+    assert exit_code == 0
+
+    report_file = output_folder / "report_books.csv.txt"
+    assert report_file.exists() is True
+
+    report_text = report_file.read_text(encoding="utf-8")
+    assert "СТАТУС: OK" in report_text
